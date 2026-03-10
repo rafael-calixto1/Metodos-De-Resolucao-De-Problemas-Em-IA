@@ -55,7 +55,7 @@ cd Metodos-De-Resolucao-De-Problemas-Em-IA
 
 3. Execute o script principal:
 ```bash
-python nome_do_seu_arquivo.py
+python aula-10-03-26
 
 ```
 
