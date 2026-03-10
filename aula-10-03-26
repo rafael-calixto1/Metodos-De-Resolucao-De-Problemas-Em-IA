@@ -1,0 +1,111 @@
+import heapq
+from typing import List, Tuple, Optional, Dict
+
+Coord = Tuple[int, int]
+
+def manhattan(a: Coord, b: Coord) -> int:
+    """Heurística admissível para movimentos em 4 direções e custo unitário."""
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def vizinhos(pos: Coord, linhas: int, colunas: int) -> List[Coord]:
+    """Retorna vizinhos em 4 direções dentro dos limites da grade."""
+    r, c = pos
+    moves = [(r-1, c), (r+1, c), (r, c-1), (r, c+1)]
+    return [(nr, nc) for nr, nc in moves if 0 <= nr < linhas and 0 <= nc < colunas]
+
+def reconstrui_caminho(came_from: Dict[Coord, Coord], atual: Coord) -> List[Coord]:
+    """Reconstrói o caminho da origem até 'atual' usando o dicionário came_from."""
+    caminho = [atual]
+    while atual in came_from:
+        atual = came_from[atual]
+        caminho.append(atual)
+    caminho.reverse()
+    return caminho
+
+def astar_grade(grade: List[List[int]], inicio: Coord, meta: Coord) -> Optional[List[Coord]]:
+    """
+    A* em uma grade:
+      - grade[r][c] == 0 -> célula livre
+      - grade[r][c] == 1 -> obstáculo
+    Retorna a lista de coordenadas do caminho (inclusivo) ou None se não existir.
+    """
+    linhas, colunas = len(grade), len(grade[0])
+    if grade[inicio[0]][inicio[1]] == 1 or grade[meta[0]][meta[1]] == 1:
+        return None  # início ou meta bloqueados
+
+    # Conjuntos e estruturas A*
+    aberto = []  # fila de prioridade com tuplas (f_score, id_seq, no)
+    id_seq = 0   # desempate estável no heap
+    heapq.heappush(aberto, (manhattan(inicio, meta), id_seq, inicio))
+
+    came_from: Dict[Coord, Coord] = {}
+    g_score = {inicio: 0}
+    f_score = {inicio: manhattan(inicio, meta)}
+    fechado = set()
+
+    while aberto:
+        _, _, atual = heapq.heappop(aberto)
+
+        if atual == meta:
+            return reconstrui_caminho(came_from, atual)
+
+        if atual in fechado:
+            continue
+        fechado.add(atual)
+
+        for nb in vizinhos(atual, linhas, colunas):
+            if grade[nb[0]][nb[1]] == 1:
+                continue  # obstáculo
+            tentativo_g = g_score[atual] + 1  # custo unitário por passo
+
+            if tentativo_g < g_score.get(nb, float('inf')):
+                came_from[nb] = atual
+                g_score[nb] = tentativo_g
+                f = tentativo_g + manhattan(nb, meta)
+                f_score[nb] = f
+                id_seq += 1
+                heapq.heappush(aberto, (f, id_seq, nb))
+
+    return None  # sem caminho
+
+def imprime_grade_com_caminho(grade: List[List[int]], caminho: List[Coord]) -> None:
+    """Imprime a grade com o caminho marcado como '*'."""
+    marcas = {pos: '*' for pos in caminho}
+    for r, linha in enumerate(grade):
+        linha_str = []
+        for c, val in enumerate(linha):
+            if (r, c) in marcas:
+                linha_str.append('*')
+            elif val == 1:
+                linha_str.append('#')  # obstáculo
+            else:
+                linha_str.append('.')
+        print(' '.join(linha_str))
+
+if __name__ == "__main__":
+    # 0 = livre, 1 = obstáculo
+    grade = [
+        [0,0,0,0,0,0,0,0,0,0],
+        [0,1,1,1,0,0,1,1,1,0],
+        [0,0,0,1,0,0,0,0,1,0],
+        [1,1,0,1,0,1,1,0,1,0],
+        [0,0,0,0,0,0,1,0,0,0],
+        [0,1,1,1,1,0,1,1,1,0],
+        [0,0,0,0,1,0,0,0,0,0],
+        [1,1,0,0,1,0,1,1,1,0],
+        [0,0,0,0,0,0,0,0,1,0],
+        [0,1,1,1,1,1,1,0,0,0],
+    ]
+
+    inicio = (0, 0)
+    meta   = (9, 9)
+
+    caminho = astar_grade(grade, inicio, meta)
+    if caminho is None:
+        print("Não existe caminho entre início e meta.")
+    else:
+        custo = len(caminho) - 1  # número de passos
+        print(f"Caminho encontrado com custo {custo} (número de passos).")
+        print("Caminho:", caminho)
+        print("\nGrade com caminho (*), obstáculos (#) e livres (.):\n")
+        imprime_grade_com_caminho(grade, caminho)
